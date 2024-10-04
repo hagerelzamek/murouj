@@ -313,8 +313,6 @@ export const updateAboutInDB = async (id, updatedAbout) => {
         throw error;
       }
     };
-  
-
     export const getWhatFromDB = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "what"));
@@ -364,6 +362,9 @@ export const updateAboutInDB = async (id, updatedAbout) => {
           throw error;
         }
       };
+  
+
+    
     
 
       export const getMVFromDB = async () => {

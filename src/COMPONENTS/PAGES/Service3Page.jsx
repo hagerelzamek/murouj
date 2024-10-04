@@ -35,7 +35,7 @@ function Service3Page() {
                 </Typography>
             </Box>
         <ServiceCard cardData={cardData3}
-         description="We build strong teams through strategic HR management, offering comprehensive solutions from recruitment to employee engagement, ensuring alignment with your business objectives." />
+         description={{en:"We build strong teams through strategic HR management, offering comprehensive solutions from recruitment to employee engagement, ensuring alignment with your business objectives.",ar:""}} />
          <Footer></Footer>
        
   

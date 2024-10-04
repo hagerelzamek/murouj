@@ -42,7 +42,7 @@ export default function Blog() {
 
   const fetchBlogs = async () => {
     const blogsSnapshot = await getDocs(collection(db, "blogs"));
-    const blogs = blogsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const blogs = blogsSnapshot.docs.map(doc => ({ ...doc.data(),id: doc.id,  }));
     setBlogData(blogs); // Update the state with the latest blogs
   };
   
@@ -305,7 +305,7 @@ export default function Blog() {
         {blogData.map((blog, index) => (
           <Grid item xs={12} sm={6} md={4} key={index}>
             <Card sx={{ fontFamily: isRTL ? 'Noto Kufi Arabic' : 'Poppins',width:'100%' ,
-                height: {xs:expandedIndex === index ? 'auto' : '430px',md:expandedIndex === index ? 'auto' : 'auto', }, // Adjust height for non-expanded cards
+                height: {xs:expandedIndex === index ? 'auto' : 'auto',md:expandedIndex === index ? 'auto' : 'auto', }, // Adjust height for non-expanded cards
                 overflow: 'hidden',  // Ensure overflow is hidden
                 transition: 'height 0.3s ease'  // Smooth transition for height change
             }}>

@@ -35,7 +35,7 @@ function Service4Page() {
                 </Typography>
             </Box>
         <ServiceCard cardData={cardData4}
-         description="We provide legal and administrative services to help your business maintain compliance, manage risk, and streamline operations with expert guidance." />
+         description={{en:"We provide legal and administrative services to help your business maintain compliance, manage risk, and streamline operations with expert guidance.",ar:""}} />
          <Footer></Footer>
        
   

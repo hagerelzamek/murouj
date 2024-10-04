@@ -35,7 +35,10 @@ function Service6Page() {
                 </Typography>
             </Box>
         <ServiceCard cardData={cardData6}
-        description="We enhance skills and foster growth through tailored training programs, workshops, and development initiatives to elevate employee capabilities, drive performance, and support continuous organizational growth." />
+        description={{en:"We enhance skills and foster growth through tailored training programs, workshops, and development initiatives to elevate employee capabilities, drive performance, and support continuous organizational growth.",
+          ar:""
+        }} />
+
          <Footer></Footer>
        
   

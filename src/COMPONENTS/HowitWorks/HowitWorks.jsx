@@ -4,8 +4,8 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
-import { Button, Card, useMediaQuery } from '@mui/material';
-import { ArrowDropDown, ArrowRightAlt, East, West } from '@mui/icons-material';
+import { Button, Card, Modal, TextField, useMediaQuery } from '@mui/material';
+import { ArrowDropDown, ArrowRightAlt, East, Edit, West } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 import img1 from '../ASSETS/1 (1).png'
@@ -19,6 +19,11 @@ import img8 from '../ASSETS/8 (1).png'
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
+import { useState } from 'react';
+import { useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../Firebase';
+import { getHowFromDB, saveHowToDB, updateHowInDB } from '../../COMPONENTS/BlogPage/db';
 
 
 
@@ -114,7 +119,9 @@ const accordionData = [
   ];
 
   const BoldTextBeforeColon = ({ text, isRTL }) => {
-    const parts = text.split(':');
+    const validText = typeof text === 'string' ? text : ''; // Ensure text is a string
+    const parts = validText.split(':');
+    
     return (
       <Typography
         sx={{
@@ -122,10 +129,10 @@ const accordionData = [
           color: 'white',
           marginRight: '0rem',
           fontSize: { xs: '13px', md: '15px' },
-          fontFamily:isRTL?'Noto Kufi Arabic':'Poppins',
+          fontFamily: isRTL ? 'Noto Kufi Arabic' : 'Poppins',
         }}
       >
-        <span style={{ fontWeight: 'bold', color: '#fec62a', fontFamily:isRTL?'Noto Kufi Arabic':'Poppins', }}>
+        <span style={{ fontWeight: 'bold', color: '#fec62a', fontFamily: isRTL ? 'Noto Kufi Arabic' : 'Poppins' }}>
           {parts[0]}
         </span>
         {parts[1] && <span>{`: ${parts[1]}`}</span>}
@@ -133,11 +140,128 @@ const accordionData = [
     );
   };
   
+  
 export default function HowitWorks() {
   const { t } = useTranslation();
   const isRTL = i18n.language === 'ar';
     const items = [1, 2, 3, 4, 5, 6]; // Example items
-
+    const [openModal, setOpenModal] = React.useState(false);
+    const [selectedTypography, setSelectedTypography] = React.useState('');
+  
+    const [headerText, setHeaderText] = useState({
+      en: " ",
+      ar:" ", // Arabic translation
+    });
+    const [typographyContent, setTypographyContent] = useState({
+      en: accordionData.map(card => ({ title: card.title, content: card.content })),
+      ar: accordionData.map(card => ({ title: '', content: '' }))
+    });
+    
+    const [howId, setHowId] = useState(null);  // Store Firestore document ID
+    const [isAdmin, setIsAdmin] = useState(false);  // Track admin status
+    
+    // Fetch headers from Firestore on mount
+    React.useEffect(() => {
+      const fetchHow = async () => {
+        try {
+          const howData = await getHowFromDB();
+          if (howData.length > 0) {
+            setHeaderText({
+              en: howData[0].header?.en || '',
+              ar: howData[0].header?.ar || '',
+            });
+            setTypographyContent({
+              en: Array.isArray(howData[0].en) ? howData[0].en : accordionData.map(card => ({ title: card.title, content: card.content })),
+              ar: Array.isArray(howData[0].ar) ? howData[0].ar : accordionData.map(card => ({ title: '', content: '' }))
+            });
+            setHowId(howData[0].id || null);
+          }
+        } catch (error) {
+          console.error('Error fetching how data:', error);
+        }
+      };
+      
+      
+      fetchHow();
+    }, []);
+    
+    
+    
+  
+    // Check if user is admin
+    useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user && user.email === 'murouj@work.com') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      });
+  
+      return () => unsubscribe();
+    }, []);
+  
+    // Open modal when edit is clicked
+    // Open modal when edit is clicked
+  const handleOpenModal = (typographyKey, index) => {
+    setSelectedTypography({ key: typographyKey, index });
+    setOpenModal(true);
+  };
+  
+    
+    // Close modal
+    const handleCloseModal = () => {
+      setOpenModal(false);
+      setSelectedTypography('');
+    };
+    const handleOpenHeaderModal = () => {
+      setSelectedTypography({ key: 'header' });
+      setOpenModal(true);
+    };
+    // Handle form submission to save/update typography in Firestore
+    const handleSave = async () => {
+      const currentLang = i18n.language;
+      const { key, index } = selectedTypography || {};
+    
+      let newValue = document.getElementById('typographyInput').value;
+    
+      // Ensure that the new value is defined and not an empty string
+      if (!newValue || newValue.trim() === '') {
+        console.error('Input cannot be empty or undefined');
+        return;
+      }
+    
+      if (key && index !== undefined) {
+        // Handle card text updates
+        const updatedContent = {
+          ...typographyContent,
+          [currentLang]: typographyContent[currentLang].map((card, i) =>
+            i === index ? { ...card, [key]: newValue } : card
+          ),
+        };
+    
+        setTypographyContent(updatedContent);
+    
+        try {
+          if (howId) {
+            await updateHowInDB(howId, { [currentLang]: updatedContent[currentLang] });
+          } else {
+            const newId = await saveHowToDB(updatedContent);
+            setHowId(newId);
+          }
+        } catch (error) {
+          console.error('Error saving services:', error);
+        }
+      }
+    
+      handleCloseModal();
+    };
+    
+    
+    
+    
+    
+    
     // Use the useMediaQuery hook to check screen size
     const isMediumScreen = useMediaQuery('(min-width: 900px) and (max-width: 1350px)');
     const handleApplyClick = () => {
@@ -190,8 +314,15 @@ accordionData.map((item, index) => (
                     marginLeft :/*  isRTL?'6rem': */'0rem'
                     }}
                   >
-                 {t(item.title)}
+                   {typographyContent[i18n.language]?.[index]?.title || accordionData[index].title}
+                   {isAdmin && index !== 0 && (
+    <Edit
+      onClick={() => handleOpenModal('title', index)}
+      sx={{ cursor: 'pointer', color: 'purple', marginLeft: '1rem' }}
+    />
+  )}
                   </Typography>
+                  
                   <Typography
                     sx={{
                       marginTop: 0.5,
@@ -203,15 +334,30 @@ accordionData.map((item, index) => (
                       marginRight:  isRTL?'0rem': {xs:'1rem',md:'3rem'},
                     }}
                   >
-                     <BoldTextBeforeColon text={t(item.content)} isRTL={isRTL} />
+                     <BoldTextBeforeColon
+    text={typographyContent[i18n.language]?.[index]?.content || accordionData[index].content}
+    isRTL={isRTL}
+  />
+
+{isAdmin && index !== 0 && (
+    <Edit
+      onClick={() => handleOpenModal('content', index)}
+      sx={{ cursor: 'pointer', color: 'purple', marginLeft: '1rem' }}
+    />
+  )}
+
                   </Typography>
+                 
                 </Box>
               </Box></Grid></Grid>
               {index === 0 && (
-                  <Typography sx={{  fontFamily:isRTL?'Noto Kufi Arabic':'Poppins', marginBottom: { xs: '3rem', md: '5rem' }, marginTop: { xs: '9rem', md: '3rem' }, fontWeight: 'bold', color: 'white' ,fontSize:{xs:'40px',md:'70px'},marginLeft:isRTL?'0rem':'2rem'}} variant="h4" gutterBottom align="center">
-                    {t("How it Works")}<span style={{color:'#fec62a'}}> {t("?")}   </span>
+                  <Typography onClick={isAdmin ? handleOpenHeaderModal : undefined} sx={{  fontFamily:isRTL?'Noto Kufi Arabic':'Poppins', marginBottom: { xs: '3rem', md: '5rem' }, marginTop: { xs: '9rem', md: '3rem' }, fontWeight: 'bold', color: 'white' ,fontSize:{xs:'40px',md:'70px'},marginLeft:isRTL?'0rem':'2rem'}} variant="h4" gutterBottom align="center">
+                     
+                    {t("How it Works")}<span style={{color:'#fec62a'}}> {t("?")}   </span> 
                   </Typography>
+                  
                 )}
+                 
             </Card></motion.div>
           </Grid>
         ))}
@@ -244,6 +390,40 @@ justifyContent:'flex-end',textAlign:'right'
               ) : (
                 <East sx={{ marginLeft: '0.5rem', fontSize: '20px' }} />
               )}</Button></Link></Box>
+
+              {openModal && selectedTypography && (
+  <Modal open={openModal} onClose={handleCloseModal}>
+    <Box
+      sx={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '80%',
+        bgcolor: 'background.paper',
+        border: '2px solid #000',
+        boxShadow: 24,
+        p: 4,
+      }}
+    >
+      <Typography variant="h6" component="h2">
+      {selectedTypography.key === 'header' ? t('Edit Header Text') : t('Edit Text')}
+      </Typography>
+      <TextField
+        id="typographyInput"
+        label="Edit Text"
+        fullWidth
+        defaultValue={selectedTypography.key === 'header' ? headerText[i18n.language] : typographyContent[i18n.language][selectedTypography.index][selectedTypography.key]}
+        variant="outlined"
+        margin="normal"
+      />
+      <Button onClick={handleSave} variant="contained" color="primary">
+        Save
+      </Button>
+    </Box>
+  </Modal>
+)}
+
     </Box>
   );
 }

@@ -36,7 +36,7 @@ function Service2Page() {
                 </Typography>
             </Box>
         <ServiceCard cardData={cardData2}
-         description="We provide expert financial services, from bookkeeping to strategic planning, ensuring your business stays compliant, profitable, and ready for future challenges." />
+         description={{en:"We provide expert financial services, from bookkeeping to strategic planning, ensuring your business stays compliant, profitable, and ready for future challenges.",ar:""}} />
          <Footer></Footer>
        
   

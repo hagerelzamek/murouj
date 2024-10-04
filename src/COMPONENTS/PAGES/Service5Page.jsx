@@ -35,7 +35,7 @@ function Service5Page() {
                 </Typography>
             </Box>
         <ServiceCard cardData={cardData5} 
-         description="We offer innovative IT strategies, including cybersecurity, software integration, and cloud solutions, to drive digital transformation and safeguard your business."/>
+         description={{en:"We offer innovative IT strategies, including cybersecurity, software integration, and cloud solutions, to drive digital transformation and safeguard your business.",ar:""}}/>
          <Footer></Footer>
        
   

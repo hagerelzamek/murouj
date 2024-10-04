@@ -35,7 +35,7 @@ function Service1Page() {
                 </Typography>
             </Box>
         <ServiceCard cardData={cardData1} 
-         description="We optimize your business performance through strategic planning, process improvements, and thorough evaluations, ensuring alignment with goals and sustainable growth."/>
+         description={{en:"We optimize your business performance through strategic planning, process improvements, and thorough evaluations, ensuring alignment with goals and sustainable growth.",ar:""}}/>
          <Footer></Footer>
        
   

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Card, CardContent, Typography, Box, Grid, Stack, Pagination, PaginationItem } from '@mui/material';
+import { Card, CardContent, Typography, Box, Grid, Stack, Pagination, PaginationItem, TextField, Modal } from '@mui/material';
 import { motion } from 'framer-motion';
-import { ArrowBack, ArrowForward, East, West } from '@mui/icons-material';
+import { ArrowBack, ArrowForward, East, Edit, West } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { Button } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
+import { onAuthStateChanged } from 'firebase/auth/cordova';
+import { auth } from '../../Firebase';
+import { useEffect } from 'react';
+import { getScardFromDB, saveScardToDB, updateScardInDB } from '../BlogPage/db';
 
 const ServiceCard = ({ cardData, description }) => {
   const { t } = useTranslation();
@@ -23,7 +27,142 @@ const ServiceCard = ({ cardData, description }) => {
   // Get the cards for the current page
   const startIndex = (page - 1) * itemsPerPage;
   const currentCards = cardData.slice(startIndex, startIndex + itemsPerPage);
+  const [currentDescription, setCurrentDescription] = useState(description);
+  const [newDescription, setNewDescription] = useState(currentDescription[i18n.language]);
+  const [openModal, setOpenModal] = React.useState(false);
+  const [selectedTypography, setSelectedTypography] = React.useState('');
 
+ /*  const [headerText, setHeaderText] = useState({
+    en: " ",
+    ar:" ", // Arabic translation
+  }); */
+  const [typographyContent, setTypographyContent] = useState({
+    en: cardData.map(card => ({ title: card.title, content: card.content, description: description.en })),
+    ar: cardData.map(card => ({ title: '', content: '', description: description.ar }))
+  });
+  
+  
+  const [cardId, setCardId] = useState(null);  // Store Firestore document ID
+  const [isAdmin, setIsAdmin] = useState(false);  // Track admin status
+  
+  // Fetch headers from Firestore on mount
+  React.useEffect(() => {
+    const fetchHow = async () => {
+      try {
+        const howData = await getScardFromDB();
+        /* if (howData.length > 0) {
+          setHeaderText({
+            en: howData[0].header?.en || '',
+            ar: howData[0].header?.ar || '',
+          }); */
+          setTypographyContent({
+            en: Array.isArray(howData[0].en) ? howData[0].en : cardData.map(card => ({ title: card.title, content: card.content })),
+            ar: Array.isArray(howData[0].ar) ? howData[0].ar : cardData.map(card => ({ title: '', content: '' }))
+          });
+         
+          setCardId(howData[0].id || null);
+     /*    } */
+      } catch (error) {
+        console.error('Error fetching how data:', error);
+      }
+    };
+    
+    
+    fetchHow();
+  }, []);
+  
+  
+  
+
+  // Check if user is admin
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && user.email === 'murouj@work.com') {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Open modal when edit is clicked
+  // Open modal when edit is clicked
+const handleOpenModal = (typographyKey, index) => {
+  setSelectedTypography({ key: typographyKey, index });
+  setOpenModal(true);
+};
+
+  
+  // Close modal
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setSelectedTypography('');
+  };
+  const handleOpenDescriptionModal = () => {
+    setSelectedTypography({ key: 'description' });
+    setOpenModal(true);
+  };
+  
+  // Handle form submission to save/update typography in Firestore
+  const handleSave = async () => {
+    setCurrentDescription({
+      ...currentDescription,
+      [i18n.language]: newDescription
+    });
+    handleCloseModal();
+    
+
+   /*  if (newDescription.trim() !== '') {
+      setCurrentDescription({
+        ...currentDescription,
+        [currentLang]: newDescription
+      });
+    }
+ */
+    
+
+    const currentLang = i18n.language;
+    const { key } = selectedTypography || {};
+  
+    let newValue = document.getElementById('typographyInput').value;
+  
+    if (!newValue || newValue.trim() === '') {
+      console.error('Input cannot be empty or undefined');
+      return;
+    }
+  
+    if (key) {
+      const updatedContent = {
+        ...typographyContent,
+        [currentLang]: typographyContent[currentLang].map((card, i) => {
+          if (key === 'description') {
+            return { ...card, description: newValue };
+          }
+          return card;
+        }),
+      };
+  
+      setTypographyContent(updatedContent);
+  
+      try {
+        if (cardId) {
+          await updateScardInDB(cardId, { [currentLang]: updatedContent[currentLang] });
+        } else {
+          const newId = await saveScardToDB(updatedContent);
+          setCardId(newId);
+        }
+      } catch (error) {
+        console.error('Error saving services:', error);
+      }
+    }
+  
+    handleCloseModal();
+  };
+  
+  
+  
   return (
     <Box sx={{direction :isRTL ? 'rtl' : 'ltr'}}>
       <Grid container spacing={4} alignItems="center">
@@ -77,11 +216,23 @@ const ServiceCard = ({ cardData, description }) => {
                       <Typography sx={{  textAlign:isRTL?'right': 'left', color: '#11111f', fontWeight: 'bold',fontSize:'18px', direction:isRTL?'rtl':'ltr',
            
             fontFamily:isRTL?'Noto Kufi Arabic':'Poppins',}} variant="h6" gutterBottom>
-                        {t(item.title)}
-                      </Typography>
+                        {typographyContent[i18n.language]?.[index]?.title || cardData[index].title}
+                   {isAdmin && (
+    <Edit
+      onClick={() => handleOpenModal('title', index)}
+      sx={{ cursor: 'pointer', color: 'purple', marginLeft: '1rem' }}
+    />
+  )}
+                  </Typography>
                       <Typography sx={{  fontFamily:isRTL?'Noto Kufi Arabic':'Poppins', textAlign:isRTL?'right': 'left', color: '#11111f',fontSize:'15px', }} variant="body1">
-                        {t(item.content)}
-                      </Typography>
+                      {typographyContent[i18n.language]?.[index]?.content || cardData[index].content}
+                   {isAdmin && (
+    <Edit
+      onClick={() => handleOpenModal('content', index)}
+      sx={{ cursor: 'pointer', color: 'purple', marginLeft: '1rem' }}
+    />
+  )}
+                  </Typography>
                     </Box>
                   </CardContent>
                 </Card>
@@ -140,7 +291,7 @@ const ServiceCard = ({ cardData, description }) => {
                   color: '#11111f',
                   
                   border: '1px solid #fec62a',
-justifyContent:'flex-end',textAlign:'right'
+                  justifyContent:'flex-end',textAlign:'right'
                 },
                
               }} >{t("Get Consultaion Now")} {isRTL ? (
@@ -173,12 +324,52 @@ justifyContent:'flex-end',textAlign:'right'
                  
                 }}
               >
-                {t(description)}
-              </Typography>
+ 
+ {currentDescription[i18n.language]} {/* Dynamically display based on language */}
+          {isAdmin && (
+            <Edit
+              onClick={handleOpenDescriptionModal}
+              sx={{ cursor: 'pointer', color: 'purple', marginLeft: '1rem' }}
+            />
+          )}
+        </Typography>
             </motion.div>
           </Box>
         </Grid>
       </Grid>
+      {openModal && selectedTypography && (
+  <Modal open={openModal} onClose={handleCloseModal}>
+    <Box
+      sx={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 400,
+        bgcolor: 'background.paper',
+        border: '2px solid #000',
+        boxShadow: 24,
+        p: 4,
+      }}
+    >
+      <Typography variant="h6" component="h2">
+      {selectedTypography.key === 'description' ? t('Edit description Text') : t('Edit Text')}
+      </Typography>
+      <TextField
+        id="typographyInput"
+        label="Edit Text"
+        fullWidth
+        value={newDescription} // Controlled input field
+              onChange={(e) => setNewDescription(e.target.value)} // Update state on input change
+              variant="outlined"
+        margin="normal"
+      />
+      <Button onClick={handleSave} variant="contained" color="primary">
+        Save
+      </Button>
+    </Box>
+  </Modal>
+)}
     </Box>
   );
 };
